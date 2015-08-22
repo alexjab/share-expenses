@@ -1,0 +1,58 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Share Expenses</title>
+    <script src="bower_components/react/react.min.js"></script>
+    <script src="bower_components/react/JSXTransformer.js"></script>
+  </head>
+  <body>
+    <div id="share-app"></div>
+    <script type="text/jsx">
+      var ShareApp = React.createClass ({
+        render: function () {
+          return (
+            <UserList users={this.props.users}/>
+          );
+        }
+      });
+
+      var UserList = React.createClass ({
+        render: function () {
+          var userList = this.props.users.map (function (user) {
+            return (
+              <li key={user.key}>{user.name}</li>
+            );
+          });
+          return (
+            <div>Users
+              <ul>
+                {userList}
+              </ul>
+            </div>
+          );
+        }
+      });
+
+      var USERS = [{
+        key: Math.random (),
+        name: 'Antoine'
+      }, {
+        key: Math.random (),
+        name: 'Jojo'
+      }, {
+        key: Math.random (),
+        name: 'Vincent'
+      }, {
+        key: Math.random (),
+        name: 'Alex'
+      }];
+
+      React.render (
+        <ShareApp users={USERS}/>,
+        document.getElementById ('split-app')
+      );
+    </script>
+  </body>
+</html>
