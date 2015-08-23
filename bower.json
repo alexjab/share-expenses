@@ -1,0 +1,21 @@
+{
+  "name": "share-expenses",
+  "version": "0.0.0",
+  "authors": [
+    "alexjab <alexandre.jablon@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "react": "~0.13.3",
+    "lodash": "~3.10.1",
+    "bootstrap": "~3.3.5"
+  }
+}
