@@ -3,8 +3,8 @@
 var ShareApp = React.createClass ({
   getInitialState: function () {
     return {
-      users: [],
-      _users: {},
+      users: [{name: 'Alex', key: 0}],
+      _users: {'0':{name: 'Alex', key: 0}},
       expenses: []
     };
   },
@@ -17,12 +17,31 @@ var ShareApp = React.createClass ({
 
     return this.setState ({ users: users, _users: _users });
   },
+  handleAddExpense: function (newExpense) {
+    var expenses = this.state.expenses;
+    expenses.push (newExpense);
+
+    return this.setState ({ expenses: expenses });
+  },
+  handleCheckExpenseUser: function (userKey, expenseKey, isChecked) {
+    var expenses = this.state.expenses;
+    var expense = expenses[expenseKey];
+
+    if (isChecked) {
+      expense.splitBetween[userKey] = true;
+    } else {
+      delete expense.splitBetween[userKey];
+    }
+
+    expenses.splice (expenseKey, 1, expense);
+    return this.setState ({ expenses: expenses });
+  },
   render: function () {
     return (
       <div>
         <div className="row">
           <UserList users={this.state.users} onAddUser={this.handleAddUser}/>
-          <ExpenseList users={this.state.users} _users={this.state._users} expenses={this.state.expenses} />
+          <ExpenseList users={this.state.users} _users={this.state._users} expenses={this.state.expenses} onAddExpense={this.handleAddExpense} onCheckExpenseUser={this.handleCheckExpenseUser}/>
           <TotalList users={this.state.users} _users={this.state._users} expenses={this.state.expenses}/>
         </div>
       </div>
@@ -40,7 +59,7 @@ var UserList = React.createClass ({
 
     var newUser = {
       name: newUserName,
-      key: index++
+      key: userIndex++
     };
     return this.props.onAddUser (newUser);
   },
@@ -86,6 +105,12 @@ var UserList = React.createClass ({
 });
 
 var ExpenseList = React.createClass ({
+  onAddExpense: function (expense) {
+    return this.props.onAddExpense (expense);
+  },
+  onCheckExpenseUser: function () {
+    return this.props.onCheckExpenseUser.apply (this, arguments);
+  },
   render: function () {
     var that = this;
 
@@ -98,12 +123,12 @@ var ExpenseList = React.createClass ({
     if (!this.props.expenses.length) {
       expenseContents = (
         <div className="panel-body">
-          No expense yet.
+          <span>No expense yet.</span>
         </div>
       );
     } else {
       var expenseList = this.props.expenses.map (function (expense) {
-        return (<ExpenseItem users={that.props.users} _users={that.props._users} expense={expense}/>);
+        return <ExpenseItem expense={expense} users={that.props.users} _users={that.props._users} checkExpenseUser={that.onCheckExpenseUser}/>
       });
       expenseContents = (
         <ul className="list-group">
@@ -131,25 +156,41 @@ var ExpenseList = React.createClass ({
 });
 
 var AddExpenseForm = React.createClass ({
+  getInitialState: function () {
+    return { splitBetween: {} };
+  },
   handleOnSubmit: function (e) {
     e.preventDefault ();
-    this.props.onAddExpense ();
+
+    var newExpense = {};
+    newExpense.key = expenseIndex++;
+    newExpense.amount = parseFloat (React.findDOMNode(this.refs.newExpenseAmount).value.trim());
+    newExpense.paidBy = parseFloat (React.findDOMNode(this.refs.newExpensePayer).value.trim());
+    newExpense.splitBetween = {};
+
+    var that = this;
+    this.props.users.forEach (function (user) {
+      var isChecked = React.findDOMNode(that.refs['payer' + user.key]).checked;
+      if (isChecked) newExpense.splitBetween[user.key] = true;
+    });
+
+    return this.props.onAddExpense (newExpense);
   },
   render: function () {
     var userOptions = this.props.users.map (function (user) {
       return <option value={user.key}>{user.name}</option>;
     });
+    var that = this;
     var userCheckboxes = this.props.users.map (function (user) {
       return (
         <div className="checkbox">
           <label>
-            <input type="checkbox" />
+            <input type="checkbox" ref={'payer' + user.key}/>
             {user.name}
           </label>
         </div>
       );
     });
-    var addExpenseContent;
     if (!userOptions.length) {
       return (<span></span>);
     }
@@ -158,13 +199,13 @@ var AddExpenseForm = React.createClass ({
         <div className="form-group">
           <label for="expense-amount" className="col-sm-5 control-label">Amount:</label>
           <div className="col-sm-7">
-            <input type="number" className="form-control" id="expense-amount" placeholder="Amount" />
+            <input type="number" className="form-control" ref="newExpenseAmount" id="expense-amount" placeholder="Amount" />
           </div>
         </div>
         <div className="form-group">
           <label for="expense-payer" className="col-sm-5 control-label">Who paid:</label>
           <div className="col-sm-7">
-            <select className="form-control" id="expense-payer">
+            <select className="form-control" ref="newExpensePayer" id="expense-payer">
               {userOptions}
             </select>
           </div>
@@ -187,30 +228,37 @@ var AddExpenseForm = React.createClass ({
 });
 
 var ExpenseItem = React.createClass ({
+  onCheckUser: function (userKey, e) {
+    this.props.checkExpenseUser (userKey, this.props.expense.key, e.target.checked);
+  },
   render: function () {
     var expense = this.props.expense;
-    var userName = this.props._users[expense.payer].name;
+    var userName = this.props._users[expense.paidBy].name;
+
+    var that = this;
     var users = this.props.users.map (function (user) {
+      var isChecked = expense.splitBetween[user.key];
       return (
         <div className="checkbox">
           <label>
-            <input type="checkbox" />
+            <input type="checkbox" checked={isChecked} onChange={that.onCheckUser.bind (that, user.key)}/>
             {user.name}
           </label>
         </div>
       );
     });
+
     return (
       <li className="list-group-item">
         <p>
           <b>Amount:</b>
         </p>
-        <input type="text" className="form-control" defaultValue={expense.amount} placeholder="Amount"/>
+        <h2>$ {expense.amount}</h2>
         <hr />
         <p>
           <b>Paid by:</b>
+          <span> {userName}</span>
         </p>
-        <span>{userName}</span>
         <hr />
         <p>
           <b>Share between:</b>
@@ -254,7 +302,8 @@ var TotalList = React.createClass ({
   }
 });
 
-var index = 0;
+var userIndex = 1;
+var expenseIndex = 0;
 
 React.render (
   <ShareApp />,
