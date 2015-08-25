@@ -270,7 +270,32 @@ var ExpenseItem = React.createClass ({
 });
 
 var TotalList = React.createClass ({
+  computeWhoOwes: function () {
+    var balances = {};
+
+    var that = this;
+
+    this.props.users.forEach (function (payer) {
+      balances[payer.key] = {};
+      that.props.users.forEach (function (ower) {
+        if (ower.key === payer.key) return;
+        balances[payer.key][ower.key] = 0;
+      });
+    });
+
+    this.props.expenses.forEach (function (expense) {
+      var share = expense.amount / (_.keys (expense.splitBetween).length || that.props.users.length);
+      _.keys (expense.splitBetween).forEach (function (userKey) {
+        if (parseInt (userKey) === expense.paidBy) return;
+        balances[expense.paidBy][userKey] += share;
+        balances[userKey][expense.paidBy] -= share;
+      });
+    });
+    return balances;
+  },
   render: function () {
+    var balances = this.computeWhoOwes ();
+
     var that = this;
     if (!this.props.users.length) {
       return (<span></span>);
@@ -280,12 +305,14 @@ var TotalList = React.createClass ({
       return (<span></span>);
     }
 
-    var totalContents;
     var totals = [];
-    this.props.users.forEach (function (ower) {
-      that.props.users.forEach (function (owed) {
+    _.forEach (balances, function (amounts, payerKey) {
+      var payerName = that.props._users[payerKey].name;
+      _.forEach (amounts, function (amount, owerKey) {
+        var owerName = that.props._users[owerKey].name;
+        if (amount >= 0) return;
         totals.push (
-          <li className="list-group-item">{ower.name} owes €X to {owed.name}</li>
+          <li className="list-group-item">{payerName} owes $ {-amount} to {owerName}</li>
         );
       });
     });
