@@ -291,6 +291,7 @@ var TotalList = React.createClass ({
         balances[userKey][expense.paidBy] -= share;
       });
     });
+
     return balances;
   },
   render: function () {
