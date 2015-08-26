@@ -3,8 +3,8 @@
 var ShareApp = React.createClass ({
   getInitialState: function () {
     return {
-      users: [{name: 'Alex', key: 0}],
-      _users: {'0':{name: 'Alex', key: 0}},
+      users: [],
+      _users: {},
       expenses: []
     };
   },
