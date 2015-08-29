@@ -1,3 +1,13 @@
 .align-center {
   text-align: center;
 }
+
+.fold-button {
+  float: right;
+  cursor: pointer;
+}
+
+
+.delete-button {
+  cursor: pointer;
+}

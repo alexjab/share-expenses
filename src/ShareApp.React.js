@@ -2,10 +2,14 @@
 
 var ShareApp = React.createClass ({
   getInitialState: function () {
+    var users = this.props.users || [];
+    var _users = this.props._users || {};
+    var expenses = this.props.expenses || [];
+
     return {
-      users: [],
-      _users: {},
-      expenses: []
+      users: users,
+      _users: _users,
+      expenses: expenses
     };
   },
   handleAddUser: function (newUser) {
@@ -23,7 +27,7 @@ var ShareApp = React.createClass ({
 
     return this.setState ({ expenses: expenses });
   },
-  handleCheckExpenseUser: function (userKey, expenseKey, isChecked) {
+  handleCheckExpenseUser: function handleCheckExpenseUser(userKey, expenseKey, isChecked) {
     var expenses = this.state.expenses;
     var expense = expenses[expenseKey];
 
@@ -33,23 +37,39 @@ var ShareApp = React.createClass ({
       delete expense.splitBetween[userKey];
     }
 
-    expenses.splice (expenseKey, 1, expense);
-    return this.setState ({ expenses: expenses });
+    expenses.splice(expenseKey, 1, expense);
+    return this.setState({ expenses: expenses });
   },
   render: function () {
     return (
       <div>
         <div className="row">
-          <UserList users={this.state.users} onAddUser={this.handleAddUser}/>
-          <ExpenseList users={this.state.users} _users={this.state._users} expenses={this.state.expenses} onAddExpense={this.handleAddExpense} onCheckExpenseUser={this.handleCheckExpenseUser}/>
-          <TotalList users={this.state.users} _users={this.state._users} expenses={this.state.expenses}/>
+          <div className="col-lg-3">
+            <div className="row">
+              <AddUserForm onAddUser={this.handleAddUser} />
+            </div>
+            <div className="row">
+              <AddExpenseForm users={this.state.users} onAddExpense={this.handleAddExpense} />
+            </div>
+          </div>
+          <div className="col-lg-3">
+            <UserList users={this.state.users} />
+          </div>
+          <div className="col-lg-3">
+            <ExpenseList users={this.state.users} _users={this.state._users} expenses={this.state.expenses} onCheckExpenseUser={this.handleCheckExpenseUser}/>
+          </div>
+          <div className="col-lg-3">
+            <TotalList users={this.state.users} _users={this.state._users} expenses={this.state.expenses}/>
+          </div>
+        </div>
+        <div className="row">
         </div>
       </div>
     );
   }
 });
 
-var UserList = React.createClass ({
+var AddUserForm = React.createClass ({
   handleSubmit: function (e) {
     e.preventDefault ();
 
@@ -64,31 +84,8 @@ var UserList = React.createClass ({
     return this.props.onAddUser (newUser);
   },
   render: function () {
-    var userContent;
-    if (this.props.users.length) {
-      var userList = this.props.users.map (function (user) {
-        return (
-          <li className="list-group-item" key={user.key}>{user.name}</li>
-        );
-      });
-      userContent = (
-        <ul className="list-group">
-          {userList}
-        </ul>
-      );
-    } else {
-      userContent = (
-        <div className="panel-body">
-          No user yet.
-        </div>
-      );
-    }
     return (
-      <div className="col-lg-3">
-        <div className="panel panel-info">
-          <div className="panel-heading">Users</div>
-          {userContent}
-        </div>
+      <div className="col-lg-12">
         <div className="panel panel-default">
           <div className="panel-body">
             <form onSubmit={this.handleSubmit}>
@@ -96,58 +93,12 @@ var UserList = React.createClass ({
                 <label for="add-user-input">Add user</label>
                 <input type="text" className="form-control" ref="newUserName" id="add-user-input" placeholder="User Name" />
               </div>
+              <div className="form-group">
+                <div className="align-center">
+                  <button type="submit" className="btn btn-sm btn-success"><i className="glyphicon glyphicon-plus"></i> Add user</button>
+                </div>
+              </div>
             </form>
-          </div>
-        </div>
-      </div>
-    );
-  }
-});
-
-var ExpenseList = React.createClass ({
-  onAddExpense: function (expense) {
-    return this.props.onAddExpense (expense);
-  },
-  onCheckExpenseUser: function () {
-    return this.props.onCheckExpenseUser.apply (this, arguments);
-  },
-  render: function () {
-    var that = this;
-
-    if (!this.props.users.length) {
-      return (<span></span>);
-    }
-
-    var expenseContents;
-
-    if (!this.props.expenses.length) {
-      expenseContents = (
-        <div className="panel-body">
-          <span>No expense yet.</span>
-        </div>
-      );
-    } else {
-      var expenseList = this.props.expenses.map (function (expense) {
-        return <ExpenseItem expense={expense} users={that.props.users} _users={that.props._users} checkExpenseUser={that.onCheckExpenseUser}/>
-      });
-      expenseContents = (
-        <ul className="list-group">
-          {expenseList}
-        </ul>
-      );
-    }
-    return (
-      <div className="col-lg-4">
-        <div className="panel panel-info">
-          <div className="panel-heading">Expenses</div>
-          {expenseContents}
-        </div>
-        <div className="panel panel-default">
-          <div className="panel-body">
-            <p>
-              <b>Add expense</b>
-            </p>
-            <AddExpenseForm users={this.props.users} onAddExpense={this.onAddExpense}/>
           </div>
         </div>
       </div>
@@ -174,6 +125,12 @@ var AddExpenseForm = React.createClass ({
       if (isChecked) newExpense.splitBetween[user.key] = true;
     });
 
+    React.findDOMNode(this.refs.newExpenseAmount).value = null;
+    React.findDOMNode(this.refs.newExpensePayer).value = this.props.users[0].key;
+    this.props.users.forEach (function (user) {
+      React.findDOMNode(that.refs['payer' + user.key]).checked = false;
+    });
+
     return this.props.onAddExpense (newExpense);
   },
   render: function () {
@@ -195,41 +152,132 @@ var AddExpenseForm = React.createClass ({
       return (<span></span>);
     }
     return (
-      <form className="form-horizontal" onSubmit={this.handleOnSubmit}>
-        <div className="form-group">
-          <label for="expense-amount" className="col-sm-5 control-label">Amount:</label>
-          <div className="col-sm-7">
-            <input type="number" className="form-control" ref="newExpenseAmount" id="expense-amount" placeholder="Amount" />
+      <div className="col-lg-12">
+        <div className="panel panel-default">
+          <div className="panel-body">
+            <p>
+              <b>Add expense</b>
+            </p>
+            <form className="form-horizontal" onSubmit={this.handleOnSubmit}>
+              <div className="form-group">
+                <label for="expense-amount" className="col-sm-5 control-label">Amount:</label>
+                <div className="col-sm-7">
+                  <input type="number" className="form-control" ref="newExpenseAmount" id="expense-amount" placeholder="Amount" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label for="expense-payer" className="col-sm-5 control-label">Who paid:</label>
+                <div className="col-sm-7">
+                  <select className="form-control" ref="newExpensePayer" id="expense-payer">
+                    {userOptions}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label for="expense-users" className="col-sm-5 control-label">Split between:</label>
+                <div id="expense-users" className="col-sm-7">
+                  {userCheckboxes}
+                </div>
+              </div>
+              <div className="form-group">
+                <div className="align-center">
+                  <button type="submit" className="btn btn-sm btn-success"><i className="glyphicon glyphicon-plus"></i> Add expense</button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
-        <div className="form-group">
-          <label for="expense-payer" className="col-sm-5 control-label">Who paid:</label>
-          <div className="col-sm-7">
-            <select className="form-control" ref="newExpensePayer" id="expense-payer">
-              {userOptions}
-            </select>
-          </div>
+      </div>
+    );
+  }
+});
+
+var UserList = React.createClass ({
+  render: function () {
+    var userContent;
+    if (this.props.users.length) {
+      var userList = this.props.users.map (function (user) {
+        return (
+          <li className="list-group-item" key={user.key}>{user.name}</li>
+        );
+      });
+      userContent = (
+        <ul className="list-group">
+          {userList}
+        </ul>
+      );
+    } else {
+      userContent = (
+        <div className="panel-body">
+          No user yet.
         </div>
-        <div className="form-group">
-          <label for="expense-users" className="col-sm-5 control-label">Split between:</label>
-          <div id="expense-users" className="col-sm-7">
-            {userCheckboxes}
-          </div>
+      );
+    }
+    return (
+      <div className="panel panel-info">
+        <div className="panel-heading">Users</div>
+        {userContent}
+      </div>
+    );
+  }
+});
+
+var ExpenseList = React.createClass ({
+  render: function () {
+    var that = this;
+
+    var expenseContents, foldButton;
+
+    if (!this.props.users.length) {
+      expenseContents = (
+        <div className="panel-body">
+          <span>No user yet.</span>
         </div>
-        <hr />
-        <div className="form-group">
-          <div className="align-center">
-            <button type="submit" className="btn btn-sm btn-success"><i className="glyphicon glyphicon-plus"></i>Add expense</button>
-          </div>
+      );
+    } else if (!this.props.expenses.length) {
+      expenseContents = (
+        <div className="panel-body">
+          <span>No expense yet.</span>
         </div>
-      </form>
+      );
+    } else {
+      var that = this;
+      var expenseList = this.props.expenses.map (function (expense, index) {
+        return <ExpenseItem
+          expense={expense}
+          users={that.props.users}
+          _users={that.props._users}
+          checkExpenseUser={that.onCheckExpenseUser} />
+      });
+      expenseContents = (
+        <ul className="list-group">
+          {expenseList}
+        </ul>
+      );
+    }
+    return (
+      <div className="panel panel-info">
+        <div className="panel-heading">Expenses</div>
+        {expenseContents}
+      </div>
     );
   }
 });
 
 var ExpenseItem = React.createClass ({
+  getInitialState: function () {
+    return {
+      folded: this.props.folded || false
+    };
+  },
   onCheckUser: function (userKey, e) {
     this.props.checkExpenseUser (userKey, this.props.expense.key, e.target.checked);
+  },
+  toggleFolding: function () {
+    var that = this;
+    return this.setState ({
+      folded: !that.state.folded 
+   });
   },
   render: function () {
     var expense = this.props.expense;
@@ -248,22 +296,42 @@ var ExpenseItem = React.createClass ({
       );
     });
 
+    var foldButtonClass = this.state.folded ? 'glyphicon glyphicon-chevron-down chevron-heading' : 'glyphicon glyphicon-chevron-up chevron-heading';
+    var foldButton = <i className={foldButtonClass} onClick={this.toggleFolding}></i>;
+
+    var deleteButton = <i className="glyphicon glyphicon-trash"></i>
+
+    var expenseContent;
+    if (!this.state.folded) {
+      expenseContent = (
+        <div>
+          <p>
+            {deleteButton} <b>Amount:</b>
+          </p>
+          <h2>$ {expense.amount}</h2>
+          <hr />
+          <p>
+            <b>Paid by:</b>
+            <span> {userName}</span>
+          </p>
+          <hr />
+          <p>
+            <b>Share between:</b>
+          </p>
+          {users}
+        </div>
+      );
+    } else {
+      expenseContent = (
+        <div>
+          {deleteButton} <b>${expense.amount}</b> paid by <b>{userName}</b>
+        </div>
+      );
+    }
     return (
       <li className="list-group-item">
-        <p>
-          <b>Amount:</b>
-        </p>
-        <h2>$ {expense.amount}</h2>
-        <hr />
-        <p>
-          <b>Paid by:</b>
-          <span> {userName}</span>
-        </p>
-        <hr />
-        <p>
-          <b>Share between:</b>
-        </p>
-        {users}
+        <span className="fold-button">{foldButton}</span>
+        {expenseContent}
       </li>
     );
   }
@@ -295,45 +363,98 @@ var TotalList = React.createClass ({
     return balances;
   },
   render: function () {
-    var balances = this.computeWhoOwes ();
-
     var that = this;
+
+    var summaryContent;
+
     if (!this.props.users.length) {
-      return (<span></span>);
-    }
+      summaryContent = (
+        <div className="panel-body">No user yet.</div>
+      );
+    } else if (!this.props.expenses.length) {
+      summaryContent = (
+        <div className="panel-body">No expense yet.</div>
+      );
+    } else {
+      var balances = this.computeWhoOwes ();
 
-    if (!this.props.expenses.length) {
-      return (<span></span>);
-    }
-
-    var totals = [];
-    _.forEach (balances, function (amounts, payerKey) {
-      var payerName = that.props._users[payerKey].name;
-      _.forEach (amounts, function (amount, owerKey) {
-        var owerName = that.props._users[owerKey].name;
-        if (amount >= 0) return;
-        totals.push (
-          <li className="list-group-item">{payerName} owes $ {-amount} to {owerName}</li>
-        );
+      var totals = [];
+      _.forEach (balances, function (amounts, payerKey) {
+        var payerName = that.props._users[payerKey].name;
+        _.forEach (amounts, function (amount, owerKey) {
+          var owerName = that.props._users[owerKey].name;
+          if (amount >= 0) return;
+          totals.push (
+            <li className="list-group-item">
+              <b>{payerName}</b> owes <b>${-amount}</b> to <b>{owerName}</b>
+            </li>
+          );
+        });
       });
-    });
+      summaryContent = (
+        <ul className="list-group">
+          {totals}
+        </ul>
+      );
+    }
+
     return (
-      <div className="col-lg-4">
-        <div className="panel panel-info">
-          <div className="panel-heading">Summary</div>
-          <ul className="list-group">
-            {totals}
-          </ul>
-        </div>
+      <div className="panel panel-info">
+        <div className="panel-heading">Summary</div>
+        {summaryContent}
       </div>
     );
   }
 });
 
-var userIndex = 1;
+var userIndex = 0;
 var expenseIndex = 0;
 
+var USERS = [{
+  name: 'Jon',
+  key: userIndex++
+}, {
+  name: 'Arya',
+  key: userIndex++
+}, {
+  name: 'Tyrion',
+  key: userIndex++
+}, {
+  name: 'Jaime',
+  key: userIndex++
+}];
+
+var EXPENSES = [{
+  key: expenseIndex++,
+  paidBy: 1,
+  amount: 12,
+  splitBetween: {
+    0: true,
+    2: true,
+  }
+}, {
+  key: expenseIndex++,
+  paidBy: 3,
+  amount: 24,
+  splitBetween: {
+    0: true,
+    2: true,
+    3: true,
+  }
+}, {
+  key: expenseIndex++,
+  paidBy: 2,
+  amount: 20,
+  splitBetween: {
+    1: true,
+    2: true,
+  }
+}];
+
+var _USERS = _.indexBy (USERS, 'key');
+
 React.render (
-  <ShareApp />,
+  <ShareApp users={USERS} _users={_USERS} expenses={EXPENSES}/>,
   document.getElementById ('share-app')
 );
+
