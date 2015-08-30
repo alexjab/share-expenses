@@ -2,12 +2,20 @@
   text-align: center;
 }
 
-.fold-button {
+.delete-button {
   float: right;
   cursor: pointer;
 }
 
-
-.delete-button {
+.action-icon {
   cursor: pointer;
+  color: lightgrey;
+}
+
+.action-icon:hover {
+  color: grey;
+}
+
+.action-icon:active {
+  color: dimgray;
 }

@@ -2,9 +2,11 @@
 
 var ShareApp = React.createClass ({
   getInitialState: function () {
-    var users = this.props.users || [];
-    var _users = this.props._users || {};
-    var expenses = this.props.expenses || [];
+    var savedState = this.loadState ();
+
+    var users = this.props.users || savedState.users || [];
+    var _users = this.props._users || savedState._users || {};
+    var expenses = this.props.expenses || savedState.expenses || [];
 
     return {
       users: users,
@@ -19,11 +21,15 @@ var ShareApp = React.createClass ({
     users.push (newUser);
     _users[newUser.key] = newUser;
 
+    this.saveState ();
+
     return this.setState ({ users: users, _users: _users });
   },
   handleAddExpense: function (newExpense) {
     var expenses = this.state.expenses;
     expenses.push (newExpense);
+
+    this.saveState ();
 
     return this.setState ({ expenses: expenses });
   },
@@ -38,7 +44,70 @@ var ShareApp = React.createClass ({
     }
 
     expenses.splice(expenseKey, 1, expense);
+
+    this.saveState ();
+
     return this.setState({ expenses: expenses });
+  },
+  handleDeleteExpense: function (key) {
+    var expenseIndex = -1;
+    this.state.expenses.some (function (expense, index) {
+      if (expense.key !== key) return;
+      expenseIndex = index;
+      return;
+    });
+    if (expenseIndex !== -1) {
+      var expenses = this.state.expenses;
+      expenses.splice (expenseIndex, 1);
+      this.setState ({ expenses: expenses });
+
+      this.saveState ();
+    }
+  },
+  handleDeleteUser: function (userKey) {
+    if (!this.state._users[userKey]) return;
+
+    var expenses = this.state.expenses;
+    _.remove (expenses, function (expense) {
+      return expense.paidBy === userKey;
+    });
+    expenses.forEach (function (expense) {
+      delete expense.splitBetween[userKey];
+    });
+
+    var users = this.state.users;
+    _.remove (users, function (user) {
+      return user.key === userKey;
+    });
+    var _users = this.state._users;
+    delete _users[userKey];
+
+    this.saveState ();
+
+    return this.setState ({
+      expenses: expenses,
+      users: users,
+      _users: _users
+    });
+  },
+  saveState: function () {
+    return localStorage.setItem ('se:state', JSON.stringify (this.state));
+  },
+  loadState: function () {
+    var savedState = localStorage.getItem ('se:state');
+    if (!savedState) return;
+
+    try {
+      savedState = JSON.parse (savedState);
+    } catch (e) {
+    }
+
+    if (savedState &&
+        typeof savedState === 'object' &&
+        (savedState.users || savedState._users || savedState.expenses)) {
+      return savedState;
+    }
+    return;
   },
   render: function () {
     return (
@@ -53,10 +122,15 @@ var ShareApp = React.createClass ({
             </div>
           </div>
           <div className="col-lg-3">
-            <UserList users={this.state.users} />
+            <UserList users={this.state.users} handleDeleteUser={this.handleDeleteUser}/>
           </div>
           <div className="col-lg-3">
-            <ExpenseList users={this.state.users} _users={this.state._users} expenses={this.state.expenses} onCheckExpenseUser={this.handleCheckExpenseUser}/>
+            <ExpenseList
+              users={this.state.users}
+              _users={this.state._users}
+              expenses={this.state.expenses}
+              checkExpenseUser={this.handleCheckExpenseUser}
+              handleDeleteExpense={this.handleDeleteExpense} />
           </div>
           <div className="col-lg-3">
             <TotalList users={this.state.users} _users={this.state._users} expenses={this.state.expenses}/>
@@ -193,12 +267,21 @@ var AddExpenseForm = React.createClass ({
 });
 
 var UserList = React.createClass ({
+  handleDeleteUser: function (key) {
+    return this.props.handleDeleteUser (key);
+  },
   render: function () {
     var userContent;
+    var that = this;
     if (this.props.users.length) {
       var userList = this.props.users.map (function (user) {
         return (
-          <li className="list-group-item" key={user.key}>{user.name}</li>
+          <li className="list-group-item" key={user.key}>
+            {user.name}
+            <span className="delete-button">
+              <i className="glyphicon glyphicon-remove action-icon" onClick={that.handleDeleteUser.bind (that, user.key)}></i>
+            </span>
+          </li>
         );
       });
       userContent = (
@@ -223,6 +306,12 @@ var UserList = React.createClass ({
 });
 
 var ExpenseList = React.createClass ({
+  handleDeleteExpense: function (key) {
+    return this.props.handleDeleteExpense (key);
+  },
+  checkExpenseUser: function () {
+    this.props.checkExpenseUser.apply (this, arguments);
+  },
   render: function () {
     var that = this;
 
@@ -247,7 +336,8 @@ var ExpenseList = React.createClass ({
           expense={expense}
           users={that.props.users}
           _users={that.props._users}
-          checkExpenseUser={that.onCheckExpenseUser} />
+          checkExpenseUser={that.checkExpenseUser}
+          deleteExpense={that.handleDeleteExpense}/>
       });
       expenseContents = (
         <ul className="list-group">
@@ -267,7 +357,7 @@ var ExpenseList = React.createClass ({
 var ExpenseItem = React.createClass ({
   getInitialState: function () {
     return {
-      folded: this.props.folded || false
+      folded: this.props.folded || true
     };
   },
   onCheckUser: function (userKey, e) {
@@ -278,6 +368,9 @@ var ExpenseItem = React.createClass ({
     return this.setState ({
       folded: !that.state.folded 
    });
+  },
+  deleteExpense: function () {
+    this.props.deleteExpense (this.props.expense.key);
   },
   render: function () {
     var expense = this.props.expense;
@@ -296,17 +389,18 @@ var ExpenseItem = React.createClass ({
       );
     });
 
-    var foldButtonClass = this.state.folded ? 'glyphicon glyphicon-chevron-down chevron-heading' : 'glyphicon glyphicon-chevron-up chevron-heading';
+    var foldButtonClass = this.state.folded ? 'glyphicon glyphicon-chevron-down chevron-heading action-icon' : 'glyphicon glyphicon-chevron-up chevron-heading action-icon';
     var foldButton = <i className={foldButtonClass} onClick={this.toggleFolding}></i>;
 
-    var deleteButton = <i className="glyphicon glyphicon-trash"></i>
+    var deleteButton = <i className="glyphicon glyphicon-remove action-icon" onClick={this.deleteExpense}></i>
 
     var expenseContent;
     if (!this.state.folded) {
       expenseContent = (
         <div>
+          <p>{foldButton} </p>
           <p>
-            {deleteButton} <b>Amount:</b>
+            <b>Amount:</b>
           </p>
           <h2>$ {expense.amount}</h2>
           <hr />
@@ -324,13 +418,13 @@ var ExpenseItem = React.createClass ({
     } else {
       expenseContent = (
         <div>
-          {deleteButton} <b>${expense.amount}</b> paid by <b>{userName}</b>
+          {foldButton} &nbsp; <b>${expense.amount}</b> paid by <b>{userName}</b>
         </div>
       );
     }
     return (
       <li className="list-group-item">
-        <span className="fold-button">{foldButton}</span>
+        <span className="delete-button">{deleteButton}</span>
         {expenseContent}
       </li>
     );
@@ -352,6 +446,8 @@ var TotalList = React.createClass ({
     });
 
     this.props.expenses.forEach (function (expense) {
+      if (!_.keys (expense.splitBetween).length) return;
+
       var share = expense.amount / (_.keys (expense.splitBetween).length || that.props.users.length);
       _.keys (expense.splitBetween).forEach (function (userKey) {
         if (parseInt (userKey) === expense.paidBy) return;
@@ -391,11 +487,15 @@ var TotalList = React.createClass ({
           );
         });
       });
-      summaryContent = (
-        <ul className="list-group">
-          {totals}
-        </ul>
-      );
+      if (!totals.length) {
+        summaryContent = <div className="panel-body">All set !</div>;
+      } else {
+        summaryContent = (
+          <ul className="list-group">
+            {totals}
+          </ul>
+        );
+      }
     }
 
     return (
@@ -454,7 +554,8 @@ var EXPENSES = [{
 var _USERS = _.indexBy (USERS, 'key');
 
 React.render (
-  <ShareApp users={USERS} _users={_USERS} expenses={EXPENSES}/>,
+  //<ShareApp users={USERS} _users={_USERS} expenses={EXPENSES} />,
+  <ShareApp />,
   document.getElementById ('share-app')
 );
 
