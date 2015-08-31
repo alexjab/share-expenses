@@ -90,24 +90,30 @@ var ShareApp = React.createClass ({
       _users: _users
     });
   },
+  handleClearAll: function () {
+    userIndex = 0;
+    expenseIndex = 0;
+    this.setState ({
+      users: [],
+      _users: {},
+      expenses: []
+    });
+    return localStorage.setItem ('se:state', {});
+  },
   saveState: function () {
     return localStorage.setItem ('se:state', JSON.stringify (this.state));
   },
   loadState: function () {
     var savedState = localStorage.getItem ('se:state');
-    if (!savedState) return;
+    if (!savedState) return {};
 
     try {
       savedState = JSON.parse (savedState);
     } catch (e) {
+      savedState = {};
     }
 
-    if (savedState &&
-        typeof savedState === 'object' &&
-        (savedState.users || savedState._users || savedState.expenses)) {
-      return savedState;
-    }
-    return;
+    return savedState || {};
   },
   render: function () {
     return (
@@ -119,6 +125,9 @@ var ShareApp = React.createClass ({
             </div>
             <div className="row">
               <AddExpenseForm users={this.state.users} onAddExpense={this.handleAddExpense} />
+            </div>
+            <div className="row">
+              <ClearAllForm onClearAll={this.handleClearAll} />
             </div>
           </div>
           <div className="col-lg-3">
@@ -202,7 +211,7 @@ var AddExpenseForm = React.createClass ({
     React.findDOMNode(this.refs.newExpenseAmount).value = null;
     React.findDOMNode(this.refs.newExpensePayer).value = this.props.users[0].key;
     this.props.users.forEach (function (user) {
-      React.findDOMNode(that.refs['payer' + user.key]).checked = false;
+      React.findDOMNode(that.refs['payer' + user.key]).checked = true;
     });
 
     return this.props.onAddExpense (newExpense);
@@ -216,7 +225,7 @@ var AddExpenseForm = React.createClass ({
       return (
         <div className="checkbox">
           <label>
-            <input type="checkbox" ref={'payer' + user.key}/>
+            <input type="checkbox" ref={'payer' + user.key} defaultChecked={true} />
             {user.name}
           </label>
         </div>
@@ -505,6 +514,28 @@ var TotalList = React.createClass ({
       </div>
     );
   }
+});
+
+var ClearAllForm = React.createClass ({
+  onClearAll: function (e) {
+    e.preventDefault ();
+    this.props.onClearAll ();
+  },
+  render: function () {
+    return (
+      <div className="col-lg-12">
+        <div className="panel panel-danger">
+          <div className="panel-heading">Danger zone</div>
+          <div className="panel-body">
+            <form onSubmit={this.onClearAll}>
+              <label className="control-label">Clear all data. This cannot be undone.</label>
+              <button type="submit" className="btn btn-danger btn-sm"><i className="glyphicon glyphicon-ban-circle"></i> Clear all data</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  },
 });
 
 var userIndex = 0;
