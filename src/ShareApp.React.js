@@ -196,9 +196,12 @@ var AddExpenseForm = React.createClass ({
   handleOnSubmit: function (e) {
     e.preventDefault ();
 
+    var amount = parseFloat (React.findDOMNode(this.refs.newExpenseAmount).value.trim());
+    if (!amount) return;
+
     var newExpense = {};
     newExpense.key = expenseIndex++;
-    newExpense.amount = parseFloat (React.findDOMNode(this.refs.newExpenseAmount).value.trim());
+    newExpense.amount = amount;
     newExpense.paidBy = parseFloat (React.findDOMNode(this.refs.newExpensePayer).value.trim());
     newExpense.splitBetween = {};
 
