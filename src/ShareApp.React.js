@@ -517,7 +517,7 @@ var TotalList = React.createClass ({
           if (amount >= 0) return;
           totals.push (
             <li className="list-group-item">
-              <b>{payerName}</b> owes <b>${-amount}</b> to <b>{owerName}</b>
+              <b>{payerName}</b> owes <b>${-amount.toFixed (2)}</b> to <b>{owerName}</b>
             </li>
           );
         });
