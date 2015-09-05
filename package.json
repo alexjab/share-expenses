@@ -1,0 +1,19 @@
+{
+  "name": "share-expenses",
+  "version": "1.0.0",
+  "description": "Split expenses between friends",
+  "main": "src/ShareApp.React.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexjab/share-expenses.git"
+  },
+  "author": "alexjab <alexandre.jablon@gmail.com> (http://jablon.me/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alexjab/share-expenses/issues"
+  },
+  "homepage": "https://alexjab.github.io/share-expenses",
+  "devDependencies": {
+    "reactify": "^1.1.1"
+  }
+}
