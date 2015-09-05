@@ -1,5 +1,5 @@
 build:
-	babel ./src/ShareApp.React.js -o ./lib/ShareApp.React.js
+	browserify -t reactify ./src/ShareApp.React.js -o ./lib/ShareApp.js
 
 watch:
-	babel --watch src/ --out-dir lib/
+	watchify -t reactify ./src/ShareApp.React.js -o ./lib/ShareApp.js
